@@ -20,6 +20,7 @@
 #include <shader_class/shaderClass.h>
 #include <SPHheader/NeighborResearch.h>
 #include <SPHheader/SmoothingKernels.h>
+#include <SPHheader/spawner2D.h>
 
 static const unsigned int width = 2100;
 static const unsigned int height = 1700;
@@ -37,17 +38,19 @@ static void mouseCallBack(GLFWwindow *window, double XPos, double YPos) {
 
 #pragma region variables
 
-const float radius = 0.007f;
-const float mass = 1.0f;
-const float gravity = 9.8f;
-const float damping = 0.5f;
-const float Hradius = 0.2f;
+const float radius =       0.007f;
+const float mass =           1.0f;
+const float gravity =        9.8f;
+const float damping =        0.5f;
+const float Hradius =        0.2f;
 const float targetDensity = 10.0f;
-float stiffness = 200.0f;
+const float spawnDensity =  10.0f;
+const float jitterStrenght = 0.1f;
+float stiffness =          200.0f;
 
 glm::vec3 color = glm::vec3(1.0f, 0.0f, 0.0f);
 
-const int partNum = 196;
+unsigned int partNum;
 const int division = 10;
 
 #pragma endregion
@@ -165,6 +168,20 @@ int main() {
     std::vector<glm::vec3> pos = {};
     std::vector<glm::vec3> vel = {};
     std::vector<glm::vec3> acc = {};
+
+    // Initializing 
+
+    SpawnRegion spawnRegion = {
+        glm::vec2(0.0f, 0.0f), 
+        glm::vec2(0.5f, 0.5f)
+    };
+
+    pos = pointGrid(spawnRegion, spawnDensity, jitterStrenght);
+
+    for (int i = 0; i < pos.size(); i++) {
+        vel.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+        acc.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+    }
 
     // meshVBO
 
