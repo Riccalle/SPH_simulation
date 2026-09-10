@@ -46,8 +46,6 @@ void findNeighbor(std::vector<glm::vec3> &pos, float cellSize, float Hradius,
                 if(neighborCell == grid.end()) continue;
 
                 for(int j : neighborCell->second) {
-                    if(j == i) continue;
-
                     float Dx = pos[i].x - pos[j].x;
                     float Dy = pos[i].y - pos[j].y;
 
@@ -61,7 +59,7 @@ void findNeighbor(std::vector<glm::vec3> &pos, float cellSize, float Hradius,
 }
 
 NeighborResearch::NeighborResearch(float radius, float HRadius) {
-    NeighborResearch::cellSize = Hradius;
+    NeighborResearch::cellSize = HRadius;
     NeighborResearch::Hradius = HRadius;
 }
 

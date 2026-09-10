@@ -38,15 +38,15 @@ static void mouseCallBack(GLFWwindow *window, double XPos, double YPos) {
 
 #pragma region variables
 
-const float radius =       0.007f;
-const float mass =           1.0f;
-const float gravity =        9.8f;
-const float damping =        0.5f;
-const float Hradius =        0.2f;
-const float targetDensity = 10.0f;
-const float spawnDensity =  10.0f;
-const float jitterStrenght = 0.1f;
-float stiffness =          200.0f;
+const float radius =         0.007f;
+const float mass =            1.11f;
+const float gravity =          7.8f;
+const float damping =          0.3f;
+const float Hradius =        0.075f;
+const float targetDensity = 1000.0f;
+const float spawnDensity =  1000.0f;
+const float jitterStrenght = 0.002f;
+float stiffness =             70.0f;
 
 glm::vec3 color = glm::vec3(1.0f, 0.0f, 0.0f);
 
@@ -172,7 +172,7 @@ int main() {
     // Initializing 
 
     SpawnRegion spawnRegion = {
-        glm::vec2(0.0f, 0.0f), 
+        glm::vec2(-0.25f, -0.2f), 
         glm::vec2(0.5f, 0.5f)
     };
 
@@ -232,6 +232,7 @@ int main() {
 
     // Main code that runs once
 
+    std::cout << "Number of particles: " << pos.size() << std::endl;
     NeighborResearch NResearch = NeighborResearch(radius, Hradius);
 
     double time;
@@ -261,7 +262,8 @@ int main() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        stiffness = linearLerp(0.1, 200.0f, time);
+        for (int i = 0; i < vel.size(); i++) 
+            vel[i] *= 0.998f;
 
         NResearch.updateResearch(pos);
         computeAcceleration(acc, pos, stiffness);

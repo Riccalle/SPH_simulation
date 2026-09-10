@@ -24,8 +24,8 @@ std::vector<glm::vec3> pointGrid(SpawnRegion spawnRegion, float spawnDensity, fl
             float tx = spawnRegion.size.x / (spawnCountPerAxis.x - 1);
             float ty = spawnRegion.size.y / (spawnCountPerAxis.y - 1);
 
-            float x = i * (tx - 0.5f) + spawnRegion.position.x;
-            float y = j * (ty - 0.5f) + spawnRegion.position.y;
+            float x = i * tx + spawnRegion.position.x;
+            float y = j * ty + spawnRegion.position.y;
 
             float angle = (float)rand() / (float)RAND_MAX * 2 * 3.141592f;
             glm::vec2 dir = glm::vec2(
