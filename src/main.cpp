@@ -1,5 +1,9 @@
 // Doing my first SPH simulation 
 // Weakly Compressible Smoothed Particles Hydrodynamics
+// TODO: change hashing method in neighbor research to not kill performance
+//       add viscosity
+//       add color
+//       switch to python :<
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -37,6 +41,19 @@ static void mouseCallBack(GLFWwindow *window, double XPos, double YPos) {
 }
 
 #pragma region variables
+
+/*
+    In base al numero di particelle che si vuole,
+    cambiare il size, seguendo circa s = sqrt(A / N) dove A
+    è l'area che si vuole riempire.
+    Cambiare il raggio d'influenza, usando più o meno 2.2 * s.
+    Cambiare la massa, con targetDensity * d * d.
+    Raggio visivo a piacimento. Consigliato 0.5 * d.
+    Se si aumentano le particelle, diminuire il time step.
+    Se si riduce molto il raggio d'influenza, mettere artificialDeltaTime 
+    circa 0.4f * Hradius * sqrt(stiffness).
+    Il jitterstrenght circa 0.05f * s.
+*/
 
 const float radius =         0.007f;
 const float mass =            1.11f;
