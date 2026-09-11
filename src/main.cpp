@@ -103,7 +103,7 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
 
     for (int i = 0; i < size; i++) {
         glm::vec2 pos2D = glm::vec2(pos[i].x, pos[i].y);
-        glm::vec2 delta = e
+        glm::vec2 delta = extForce.pos - pos2D;
     }
 
     for(int i = 0; i < size; i++) {
