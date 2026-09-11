@@ -34,7 +34,7 @@ struct ExtForce {
     glm::vec3 pos = glm::vec3(0.0f);
     float magnitude = 91.0f;
     float force = 0.0f;
-    float influenceRadius = 0.08f;
+    float influenceRadius = 0.12f;
 };
 
 ExtForce extForce;
@@ -75,7 +75,7 @@ void processInput(GLFWwindow* window, double deltaTime) {
 
 const float radius =         0.007f;
 const float mass =            1.11f;
-const float gravity =          7.8f;
+const float gravity =          9.8f;
 const float damping =          0.3f;
 const float Hradius =        0.029f;
 const float targetDensity = 1800.0f;
@@ -83,7 +83,7 @@ const float spawnDensity =  8000.0f;
 const float jitterStrenght = 0.002f;
 float stiffness =             70.0f;
 
-glm::vec3 color = glm::vec3(1.0f, 0.0f, 0.0f);
+glm::vec3 color = glm::vec3(0.0f, 0.6f, 1.0f);
 
 unsigned int partNum;
 const int division = 10;
@@ -114,8 +114,8 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
         if(glm::length(delta) > extForce.influenceRadius)
             continue;
 
-        else if (extForce.force != 0.0f){
-            totForce[i] += glm::normalize(delta) * extForce.force / (glm::length(delta) * glm::length(delta));
+        if (extForce.force != 0.0f && glm::length(delta) > 1e-4f){
+            totForce[i] += glm::normalize(delta) * extForce.force * 6000.0f; // scaling it so it does something
         }
     }
 
@@ -129,8 +129,6 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
         totForce[i] += tempForce;
         if(density[i] > 0) acc[i] = totForce[i] / density[i] + glm::vec3(0.0f, -gravity, 0.0f);
         else acc[i] = glm::vec3(0.0f) + glm::vec3(0.0f, -gravity, 0.0f);
-
-        
     }
 }
 
@@ -146,7 +144,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    GLFWwindow* window = glfwCreateWindow(width, height, "Window", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(width, height, "Smoothed particles hydrodynamics simulation", NULL, NULL);
 
     if(window == NULL) {
         std::cerr << "Failed to create a window" << std::endl;
@@ -173,7 +171,7 @@ int main() {
     // Data
 
     std::vector<float> meshVert = {
-        0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f
+        0.0f, 0.0f, 0.0f, color.x, color.y, color.z
     };
 
     std::vector<GLuint> meshIndices = {};
@@ -330,6 +328,11 @@ int main() {
                 pos[i].y = radius - 1.0f;
                 vel[i].y *= -damping;
             }
+
+            if (!std::isfinite(pos[i].x) || !std::isfinite(pos[i].y)) {
+                pos[i] = glm::vec3(0.0f);
+                vel[i] = glm::vec3(0.0f);
+            } // Quickly checking whether any of my particles are not a number or infinity. 
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, dynVBO);
