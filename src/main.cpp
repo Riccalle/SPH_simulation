@@ -30,14 +30,25 @@ static const unsigned int width = 2100;
 static const unsigned int height = 1700;
 std::array<float, 2> windowRatio = {(float)height / (float)width, (float)width / (float)height};
 
+struct ExtForce {
+    glm::vec2 pos = glm::vec2(0.0f);
+    float magnitude = 9.0f;
+    float force = 0.0f;
+    float influenceRadius = 0.03f;
+};
+
+ExtForce extForce;
+
 void processInput(GLFWwindow* window, double deltaTime) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) 
         glfwSetWindowShouldClose(window, true);
-    }
-}
 
-static void mouseCallBack(GLFWwindow *window, double XPos, double YPos) {
-
+    if (glfwGetMouseButton(window, GLFW_KEY_LEFT) == GLFW_PRESS) 
+        extForce.force = extForce.magnitude;
+    else if (glfwGetMouseButton(window, GLFW_KEY_RIGHT) == GLFW_PRESS) 
+        extForce.force = -extForce.magnitude;
+    else 
+        extForce.force = 0.0f;
 }
 
 #pragma region variables
@@ -47,8 +58,8 @@ static void mouseCallBack(GLFWwindow *window, double XPos, double YPos) {
     cambiare il size, seguendo circa s = sqrt(A / N) dove A
     è l'area che si vuole riempire.
     Cambiare il raggio d'influenza, usando più o meno 2.2 * s.
-    Cambiare la massa, con targetDensity * d * d.
-    Raggio visivo a piacimento. Consigliato 0.5 * d.
+    Cambiare la massa, con targetDensity * s * s.
+    Raggio visivo a piacimento. Consigliato 0.5 * s.
     Se si aumentano le particelle, diminuire il time step.
     Se si riduce molto il raggio d'influenza, mettere artificialDeltaTime 
     circa 0.4f * Hradius * sqrt(stiffness).
@@ -59,9 +70,9 @@ const float radius =         0.007f;
 const float mass =            1.11f;
 const float gravity =          7.8f;
 const float damping =          0.3f;
-const float Hradius =        0.075f;
-const float targetDensity = 1000.0f;
-const float spawnDensity =  1000.0f;
+const float Hradius =        0.029f;
+const float targetDensity = 1800.0f;
+const float spawnDensity =  8000.0f;
 const float jitterStrenght = 0.002f;
 float stiffness =             70.0f;
 
@@ -90,6 +101,11 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
 
     computePressure(targetDensity, Stiffness, density, pressure);
 
+    for (int i = 0; i < size; i++) {
+        glm::vec2 pos2D = glm::vec2(pos[i].x, pos[i].y);
+        glm::vec2 delta = e
+    }
+
     for(int i = 0; i < size; i++) {
         glm::vec3 tempForce = glm::vec3(0.0f);
 
@@ -101,13 +117,7 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
         if(density[i] > 0) acc[i] = totForce[i] / density[i] + glm::vec3(0.0f, -gravity, 0.0f);
         else acc[i] = glm::vec3(0.0f) + glm::vec3(0.0f, -gravity, 0.0f);
 
-        /*std::cout << "i = " << i
-             << "  accY = " << acc[i].y
-             << "  accX = " << acc[i].x
-             << "  density = " << density[i]
-             << "  p = " << pressure[i]
-             << "  neighbors = " << NeighborResearch::neighbors[i].size()
-        << std::endl;*/
+        
     }
 }
 
@@ -140,8 +150,6 @@ int main() {
     }
 
     glViewport(0, 0, width, height);
-
-    glfwSetCursorPosCallback(window, mouseCallBack);
 
     // VAO 
 
