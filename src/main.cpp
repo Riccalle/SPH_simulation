@@ -31,10 +31,10 @@ static const unsigned int height = 1700;
 std::array<float, 2> windowRatio = {(float)height / (float)width, (float)width / (float)height};
 
 struct ExtForce {
-    glm::vec2 pos = glm::vec2(0.0f);
-    float magnitude = 9.0f;
+    glm::vec3 pos = glm::vec3(0.0f);
+    float magnitude = 91.0f;
     float force = 0.0f;
-    float influenceRadius = 0.03f;
+    float influenceRadius = 0.08f;
 };
 
 ExtForce extForce;
@@ -42,10 +42,17 @@ ExtForce extForce;
 void processInput(GLFWwindow* window, double deltaTime) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) 
         glfwSetWindowShouldClose(window, true);
+    
+    double mouseXpos;
+    double mouseYpos;
+    glfwGetCursorPos(window, &mouseXpos, &mouseYpos);
+    float normX = ((float)mouseXpos / (float)width) * 2.0f - 1.0f;
+    float normY = -((float)mouseYpos / (float)height) * 2.0f + 1.0f;
+    extForce.pos = glm::vec3(normX, normY, 0.0f);
 
-    if (glfwGetMouseButton(window, GLFW_KEY_LEFT) == GLFW_PRESS) 
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) 
         extForce.force = extForce.magnitude;
-    else if (glfwGetMouseButton(window, GLFW_KEY_RIGHT) == GLFW_PRESS) 
+    else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) 
         extForce.force = -extForce.magnitude;
     else 
         extForce.force = 0.0f;
@@ -85,7 +92,7 @@ const int division = 10;
 
 void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &pos, float Stiffness) {
     unsigned int size = acc.size();
-    std::vector<glm::vec3> totForce(size);
+    std::vector<glm::vec3> totForce(size, glm::vec3(0.0f));
     std::vector<float> density(size, 0.0f);
     std::vector<float> pressure(size, 0.0f);
 
@@ -102,8 +109,14 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
     computePressure(targetDensity, Stiffness, density, pressure);
 
     for (int i = 0; i < size; i++) {
-        glm::vec2 pos2D = glm::vec2(pos[i].x, pos[i].y);
-        glm::vec2 delta = extForce.pos - pos2D;
+        glm::vec3 delta = extForce.pos - pos[i];
+
+        if(glm::length(delta) > extForce.influenceRadius)
+            continue;
+
+        else if (extForce.force != 0.0f){
+            totForce[i] += glm::normalize(delta) * extForce.force / (glm::length(delta) * glm::length(delta));
+        }
     }
 
     for(int i = 0; i < size; i++) {
@@ -113,7 +126,7 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
             tempForce += pressureForce(i, j, pos, pressure, density, mass, Hradius);
         }
 
-        totForce[i] = tempForce;
+        totForce[i] += tempForce;
         if(density[i] > 0) acc[i] = totForce[i] / density[i] + glm::vec3(0.0f, -gravity, 0.0f);
         else acc[i] = glm::vec3(0.0f) + glm::vec3(0.0f, -gravity, 0.0f);
 
