@@ -45,3 +45,30 @@ void computePressure(float targetDensity, float stiffness, std::vector<float> &d
         pressure[i] = std::max(stiffness * (density[i] - targetDensity), 0.0f);
     }
 }
+
+float viscosityKernelLaplacian(float radius, float influenceRadius) {
+    if (radius > influenceRadius || radius < 1e-6f)
+        return 0.0f;
+
+    float k = 40.0f / (M_PI * pow(influenceRadius, 5));
+    return k * (influenceRadius - radius);
+}
+
+glm::vec3 viscosityForce(
+    int i,
+    int j,
+    std::vector<glm::vec3> &pos,
+    std::vector<glm::vec3> &vel,
+    std::vector<float> &density,
+    float mass,
+    float influenceRadius,
+    float viscosityCoefficent
+) {
+    float dist = glm::length(pos[i] - pos[j]);
+    float laplacian = viscosityKernelLaplacian(dist, influenceRadius);
+    float k = viscosityCoefficent * mass * laplacian / glm::length(density[j]);
+
+    glm::vec3 force = k * (vel[j] - vel[i]);
+    force.z = 0.0f;
+    return force;
+}

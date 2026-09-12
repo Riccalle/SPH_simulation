@@ -18,8 +18,8 @@ Shaders::Shaders(const char* vertexFile, const char* fragmentFile) {
     std::string vertexCode = getFileContents(vertexFile);
     std::string fragmentCode = getFileContents(fragmentFile);
 
-    std::cout << "Loading vertex shader: " << vertexFile << std::endl;
-    std::cout << "Loading fragment shader: " << fragmentFile << std::endl;
+    // std::cout << "Loading vertex shader: " << vertexFile << std::endl;
+    // std::cout << "Loading fragment shader: " << fragmentFile << std::endl;
 
     const char* vertexSource = vertexCode.c_str();
     const char* fragmentSource = fragmentCode.c_str();

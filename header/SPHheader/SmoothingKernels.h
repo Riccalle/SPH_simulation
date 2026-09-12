@@ -13,9 +13,19 @@
 float densityKernel(float radius, float Hradius);
 
 glm::vec3 pressureGradientKernel(glm::vec3 radius, float Hradius);
-
 glm::vec3 pressureForce(int i, int j, std::vector<glm::vec3> &pos, std::vector<float> &pressure, std::vector<float> &density, float mass, float Hradius);
-
 void computePressure(float targetDensity, float stiffness, std::vector<float> &density, std::vector<float> &pressure);
+
+float viscosityKernelLaplacian(float radius, float influenceRadius);
+glm::vec3 viscosityForce(
+    int i,
+    int j,
+    std::vector<glm::vec3> &pos,
+    std::vector<glm::vec3> &vel,
+    std::vector<float> &density,
+    float mass,
+    float influenceRadius,
+    float viscosityCoefficent
+);
 
 #endif

@@ -75,12 +75,13 @@ void processInput(GLFWwindow* window, double deltaTime) {
 
 const float radius =         0.007f;
 const float mass =            1.11f;
-const float gravity =          9.8f;
+const float gravity =         15.8f;
 const float damping =          0.3f;
 const float Hradius =        0.029f;
 const float targetDensity = 1800.0f;
-const float spawnDensity =  8000.0f;
+const float spawnDensity =  4500.0f;
 const float jitterStrenght = 0.002f;
+const float viscosity =        6.0f;
 float stiffness =             70.0f;
 
 glm::vec3 color = glm::vec3(0.0f, 0.6f, 1.0f);
@@ -90,7 +91,7 @@ const int division = 10;
 
 #pragma endregion
 
-void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &pos, float Stiffness) {
+void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &vel, std::vector<glm::vec3> &pos) {
     unsigned int size = acc.size();
     std::vector<glm::vec3> totForce(size, glm::vec3(0.0f));
     std::vector<float> density(size, 0.0f);
@@ -106,7 +107,7 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
         }
     }
 
-    computePressure(targetDensity, Stiffness, density, pressure);
+    computePressure(targetDensity, stiffness, density, pressure);
 
     for (int i = 0; i < size; i++) {
         glm::vec3 delta = extForce.pos - pos[i];
@@ -124,16 +125,15 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &po
 
         for(int j : NeighborResearch::neighbors[i]) {
             tempForce += pressureForce(i, j, pos, pressure, density, mass, Hradius);
+            tempForce += viscosityForce(i, j, pos, vel, density, mass, Hradius, viscosity);
         }
 
         totForce[i] += tempForce;
-        if(density[i] > 0) acc[i] = totForce[i] / density[i] + glm::vec3(0.0f, -gravity, 0.0f);
-        else acc[i] = glm::vec3(0.0f) + glm::vec3(0.0f, -gravity, 0.0f);
+        if(density[i] > 0) 
+            acc[i] = totForce[i] / density[i] + glm::vec3(0.0f, -gravity, 0.0f);
+        else 
+            acc[i] = glm::vec3(0.0f, -gravity, 0.0f);
     }
-}
-
-float linearLerp(float startValue, float endValue, float normalizedTimer) {
-    return (endValue - startValue) * normalizedTimer + startValue;
 }
 
 int main() {
@@ -279,7 +279,8 @@ int main() {
     double startTime = glfwGetTime();
 
     double deltaTime;
-    const float artificialDeltaTime = 0.001f;
+    const float artificialDeltaTime = 1.0f / 1000.0f;
+    const float horizontalBoundBox = 0.7f;
 
     while(!glfwWindowShouldClose(window)) {
         time = glfwGetTime();
@@ -298,24 +299,21 @@ int main() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        for (int i = 0; i < vel.size(); i++) 
-            vel[i] *= 0.998f;
-
         NResearch.updateResearch(pos);
-        computeAcceleration(acc, pos, stiffness);
+        computeAcceleration(acc, vel, pos);
 
         for(int i = 0; i < pos.size(); i++) {
 
             vel[i] += acc[i] * artificialDeltaTime;
             pos[i] += vel[i] * artificialDeltaTime;
 
-            if(pos[i].x + radius > 1.0f) {
-                pos[i].x = 1.0f - radius;
+            if(pos[i].x + radius > horizontalBoundBox) {
+                pos[i].x = horizontalBoundBox - radius;
                 vel[i].x *= -damping;
             }
 
-            if(pos[i].x - radius < -1.0f) {
-                pos[i].x = radius - 1.0f;
+            if(pos[i].x - radius < -horizontalBoundBox) {
+                pos[i].x = radius - horizontalBoundBox;
                 vel[i].x *= -damping;
             }
 
