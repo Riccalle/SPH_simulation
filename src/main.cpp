@@ -79,7 +79,7 @@ const float gravity =         15.8f;
 const float damping =          0.3f;
 const float Hradius =        0.029f;
 const float targetDensity = 1800.0f;
-const float spawnDensity =  4500.0f;
+const float spawnDensity =  4700.0f;
 const float jitterStrenght = 0.002f;
 const float viscosity =        6.0f;
 float stiffness =             70.0f;
@@ -209,7 +209,7 @@ int main() {
 
     SpawnRegion spawnRegion = {
         glm::vec2(-0.25f, -0.2f), 
-        glm::vec2(0.5f, 0.5f)
+        glm::vec2(0.6f, 0.6f)
     };
 
     pos = pointGrid(spawnRegion, spawnDensity, jitterStrenght);
