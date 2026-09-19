@@ -10,13 +10,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-float densityKernel(float radius, float Hradius);
+float densityKernel(float radius, float Hradius, float k);
 
-glm::vec3 pressureGradientKernel(glm::vec3 radius, float Hradius);
-glm::vec3 pressureForce(int i, int j, std::vector<glm::vec3> &pos, std::vector<float> &pressure, std::vector<float> &density, float mass, float Hradius);
+glm::vec3 pressureGradientKernel(glm::vec3 radius, float Hradius, float k);
+glm::vec3 pressureForce(int i, int j, std::vector<glm::vec3> &pos, std::vector<float> &pressure, std::vector<float> &density, float mass, float Hradius, float k);
 void computePressure(float targetDensity, float stiffness, std::vector<float> &density, std::vector<float> &pressure);
 
-float viscosityKernelLaplacian(float radius, float influenceRadius);
+float viscosityKernelLaplacian(float radius, float influenceRadius, float k);
 glm::vec3 viscosityForce(
     int i,
     int j,
@@ -25,7 +25,8 @@ glm::vec3 viscosityForce(
     std::vector<float> &density,
     float mass,
     float influenceRadius,
-    float viscosityCoefficent
+    float viscosityCoefficent,
+    float nk
 );
 
 #endif

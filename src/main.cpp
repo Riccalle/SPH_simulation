@@ -82,7 +82,11 @@ const float targetDensity = 1800.0f;
 const float spawnDensity =  4700.0f;
 const float jitterStrenght = 0.002f;
 const float viscosity =        6.0f;
-float stiffness =             70.0f;
+const float stiffness =       70.0f;
+
+const float pressGradKerConst = -30.0f / (M_PI * pow(Hradius, 5));
+const float denKerConst = 4.0f / (M_PI * pow(Hradius, 8));
+const float viscKerConst = 40.0f / (M_PI * pow(Hradius, 5));
 
 glm::vec3 color = glm::vec3(0.0f, 0.6f, 1.0f);
 
@@ -93,9 +97,20 @@ const int division = 10;
 
 void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &vel, std::vector<glm::vec3> &pos) {
     unsigned int size = acc.size();
-    std::vector<glm::vec3> totForce(size, glm::vec3(0.0f));
-    std::vector<float> density(size, 0.0f);
-    std::vector<float> pressure(size, 0.0f);
+
+    static std::vector<glm::vec3> totForce;
+    static std::vector<float> density;
+    static std::vector<float> pressure;
+
+    if (totForce.size() != size) {
+        totForce.resize(size);
+        density.resize(size);
+        pressure.resize(size);
+    }
+
+    std::fill(totForce.begin(), totForce.end(), glm::vec3(0.0f));
+    std::fill(density.begin(), density.end(), 0.0f);
+    std::fill(pressure.begin(), pressure.end(), 0.0f);
 
     for(int i = 0; i < size; i++) {
         for(int j : NeighborResearch::neighbors[i]) {
@@ -103,7 +118,7 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &ve
             float dy = pos[i].y - pos[j].y;
             float dr = sqrt(dx * dx + dy * dy);
 
-            density[i] += mass * densityKernel(dr, Hradius);
+            density[i] += mass * densityKernel(dr, Hradius, denKerConst);
         }
     }
 
@@ -124,8 +139,8 @@ void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &ve
         glm::vec3 tempForce = glm::vec3(0.0f);
 
         for(int j : NeighborResearch::neighbors[i]) {
-            tempForce += pressureForce(i, j, pos, pressure, density, mass, Hradius);
-            tempForce += viscosityForce(i, j, pos, vel, density, mass, Hradius, viscosity);
+            tempForce += pressureForce(i, j, pos, pressure, density, mass, Hradius, pressGradKerConst);
+            tempForce += viscosityForce(i, j, pos, vel, density, mass, Hradius, viscosity, viscKerConst);
         }
 
         totForce[i] += tempForce;
