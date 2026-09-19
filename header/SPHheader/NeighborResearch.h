@@ -15,15 +15,15 @@ struct Cell {
     int y;
 };
 
-std::string getCellKey(Cell cell);
+uint64_t getCellKey(int x, int y);
 
 Cell getCell(float posX, float posY, float cellSize);
 
 void buildGrid(std::vector<glm::vec3> &pos, float cellSize, 
-    std::unordered_map<std::string, std::vector<int>> &grid);
+    std::unordered_map<uint64_t, std::vector<int>> &grid);
 
 void findNeighbor(std::vector<glm::vec3> &pos, float cellSize, float Hradius, 
-    const std::unordered_map<std::string, std::vector<int>> &grid,
+    const std::unordered_map<uint64_t, std::vector<int>> &grid,
     std::vector<std::vector<int>> &neighbors
 );
 
@@ -34,7 +34,7 @@ class NeighborResearch {
 
         NeighborResearch(float radius, float HRadius);
 
-        static std::unordered_map<std::string, std::vector<int>> grid;
+        static std::unordered_map<uint64_t, std::vector<int>> grid;
         static std::vector<std::vector<int>> neighbors;
 
         void updateResearch(std::vector<glm::vec3> &pos);
