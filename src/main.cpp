@@ -1,9 +1,9 @@
 // Doing my first SPH simulation 
 // Weakly Compressible Smoothed Particles Hydrodynamics
 // TODO: change hashing method in neighbor research to not kill performance
-//       add viscosity
+//       add GUI
+//       maybe optimize more
 //       add color
-//       switch to python :<
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -32,7 +32,7 @@ std::array<float, 2> windowRatio = {(float)height / (float)width, (float)width /
 
 struct ExtForce {
     glm::vec3 pos = glm::vec3(0.0f);
-    float magnitude = 91.0f;
+    float magnitude = 71.0f;
     float force = 0.0f;
     float influenceRadius = 0.12f;
 };
@@ -250,6 +250,13 @@ int main() {
     glBindBuffer(GL_ARRAY_BUFFER, dynVBO);
     glBufferData(GL_ARRAY_BUFFER, pos.size() * sizeof(glm::vec3), pos.data(), GL_DYNAMIC_DRAW);
 
+    // Velocity VBO 
+    GLuint velVBO;
+    glGenBuffers(1, &velVBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, velVBO);
+    glBufferData(GL_ARRAY_BUFFER, vel.size() * sizeof(glm::vec3), vel.data(), GL_DYNAMIC_DRAW);
+
     // EBO 
 
     GLuint EBO;
@@ -258,7 +265,7 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, meshIndices.size() * sizeof(unsigned int), meshIndices.data(), GL_STATIC_DRAW);
 
-    // Attributes
+    // Attributes for meshVBO
 
     glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
 
@@ -268,12 +275,23 @@ int main() {
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
+    // Attributes for dynVBO
+
     glBindBuffer(GL_ARRAY_BUFFER, dynVBO);
 
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
     glEnableVertexAttribArray(2);
 
     glVertexAttribDivisor(2, 1);
+
+    // Attributes for velVBO
+
+    glBindBuffer(GL_ARRAY_BUFFER, velVBO);
+
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    glEnableVertexAttribArray(3);
+
+    glVertexAttribDivisor(3, 1);
 
     // Shaders
 
@@ -350,6 +368,9 @@ int main() {
 
         glBindBuffer(GL_ARRAY_BUFFER, dynVBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, pos.size() * sizeof(glm::vec3), pos.data());
+
+        glBindBuffer(GL_ARRAY_BUFFER, velVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vel.size() * sizeof(glm::vec3), vel.data());
 
         glBindVertexArray(VAO);
         glDrawElementsInstanced(GL_TRIANGLES, meshIndices.size(), GL_UNSIGNED_INT, (void*)0, pos.size());
