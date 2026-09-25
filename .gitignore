@@ -1,4 +1,4 @@
-header/glad/
-header/glm/
-header/KHR/
-src/glad.cpp
+OpenGL3.3/header/glad/
+OpenGL3.3/header/glm/
+OpenGL3.3/header/KHR/
+OpenGL3.3/src/glad.cpp
