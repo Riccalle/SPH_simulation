@@ -9,7 +9,7 @@ void main()
     vec3 fastColor = vec3(1.0, 1.0, 1.0);
 
     float minSpeed = 0.1;
-    float maxSpeed = 3.5;
+    float maxSpeed = 2.2;
 
     float speed = length(vel.xy);
     float t = clamp((speed - minSpeed) / (maxSpeed - minSpeed), 0.0, 1.0);

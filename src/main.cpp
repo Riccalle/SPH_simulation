@@ -26,8 +26,8 @@
 #include <SPHheader/SmoothingKernels.h>
 #include <SPHheader/spawner2D.h>
 
-static const unsigned int width = 2100;
-static const unsigned int height = 1700;
+static const unsigned int width = 1200;
+static const unsigned int height = 700;
 std::array<float, 2> windowRatio = {(float)height / (float)width, (float)width / (float)height};
 
 struct ExtForce {
@@ -79,7 +79,7 @@ const float gravity =         15.8f;
 const float damping =          0.3f;
 const float Hradius =        0.029f;
 const float targetDensity = 1800.0f;
-const float spawnDensity =  4700.0f;
+const float spawnDensity =   700.0f;
 const float jitterStrenght = 0.002f;
 const float viscosity =        6.0f;
 const float stiffness =       70.0f;
@@ -94,6 +94,10 @@ unsigned int partNum;
 const int division = 10;
 
 #pragma endregion
+
+void framebufferCallback(GLFWwindow *window, int Width, int Height) {
+    glViewport(0, 0, Width, Height);
+}
 
 void computeAcceleration(std::vector<glm::vec3> &acc, std::vector<glm::vec3> &vel, std::vector<glm::vec3> &pos) {
     unsigned int size = acc.size();
@@ -158,7 +162,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     GLFWwindow* window = glfwCreateWindow(width, height, "Smoothed particles hydrodynamics simulation", NULL, NULL);
 
     if(window == NULL) {
@@ -167,9 +171,10 @@ int main() {
         return -1;
     }
 
+    glfwSetFramebufferSizeCallback(window, framebufferCallback);
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0);
-
+    glfwSwapInterval(1); // Locking max FPS to 60
+    
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "Failed to load GLAD" << std::endl;
         return -1;
@@ -313,7 +318,8 @@ int main() {
 
     double deltaTime;
     const float artificialDeltaTime = 1.0f / 1000.0f;
-    const float horizontalBoundBox = 0.7f;
+    const float horizontalBoundBox = 0.4f;
+    const float verticalBoundBox = 0.4f;
 
     while(!glfwWindowShouldClose(window)) {
         time = glfwGetTime();
@@ -350,13 +356,13 @@ int main() {
                 vel[i].x *= -damping;
             }
 
-            if(pos[i].y + radius >  1.0f) {
-                pos[i].y = 1.0f - radius;
+            if(pos[i].y + radius >  verticalBoundBox) {
+                pos[i].y = verticalBoundBox - radius;
                 vel[i].y *= -damping;
             }
 
-            if(pos[i].y - radius < -1.0f) {
-                pos[i].y = radius - 1.0f;
+            if(pos[i].y - radius < -verticalBoundBox) {
+                pos[i].y = radius - verticalBoundBox;
                 vel[i].y *= -damping;
             }
 
@@ -379,6 +385,7 @@ int main() {
         glfwPollEvents();
     }
 
+    std::cout << "\n";
     shaderProgram.Delete();
     glfwTerminate();
     return 0;
