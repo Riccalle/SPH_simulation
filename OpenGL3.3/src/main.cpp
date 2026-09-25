@@ -26,8 +26,8 @@
 #include <SPHheader/SmoothingKernels.h>
 #include <SPHheader/spawner2D.h>
 
-static const unsigned int width = 2100;
-static const unsigned int height = 1700;
+static const unsigned int width = 1200;
+static const unsigned int height = 900;
 std::array<float, 2> windowRatio = {(float)height / (float)width, (float)width / (float)height};
 
 struct ExtForce {
@@ -56,6 +56,10 @@ void processInput(GLFWwindow* window, double deltaTime) {
         extForce.force = -extForce.magnitude;
     else 
         extForce.force = 0.0f;
+}
+
+void framebufferSizeCallback(GLFWwindow * window, int Width, int Height) {
+    glViewport(0, 0, Width, Height);
 }
 
 #pragma region variables
@@ -158,7 +162,6 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     GLFWwindow* window = glfwCreateWindow(width, height, "Smoothed particles hydrodynamics simulation", NULL, NULL);
 
     if(window == NULL) {
@@ -167,6 +170,7 @@ int main() {
         return -1;
     }
 
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
 
@@ -314,6 +318,7 @@ int main() {
     double deltaTime;
     const float artificialDeltaTime = 1.0f / 1000.0f;
     const float horizontalBoundBox = 0.7f;
+    const float verticalBoxBound = 1.0f;
 
     while(!glfwWindowShouldClose(window)) {
         time = glfwGetTime();
@@ -350,13 +355,13 @@ int main() {
                 vel[i].x *= -damping;
             }
 
-            if(pos[i].y + radius >  1.0f) {
-                pos[i].y = 1.0f - radius;
+            if(pos[i].y + radius >  verticalBoxBound) {
+                pos[i].y = verticalBoxBound - radius;
                 vel[i].y *= -damping;
             }
 
-            if(pos[i].y - radius < -1.0f) {
-                pos[i].y = radius - 1.0f;
+            if(pos[i].y - radius < -verticalBoxBound) {
+                pos[i].y = radius - verticalBoxBound;
                 vel[i].y *= -damping;
             }
 
