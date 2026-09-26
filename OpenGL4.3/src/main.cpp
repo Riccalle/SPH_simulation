@@ -1,7 +1,8 @@
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include "../header/shader_class/shaderClass.h"
 
 static const unsigned int width = 900;
 static const unsigned int height = 600;
@@ -24,20 +25,25 @@ int main(void) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
 
-    if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cerr << "Failed to load GLAD" << std::endl;
+    int version = gladLoadGL(glfwGetProcAddress);
+    if (version == 0) {
+        std::cerr << "Failed to initialize OpenGL context" << std::endl;
         return -1;
     }
 
     glViewport(0, 0, width, height);
+
+    Shaders shaderProgram = Shaders("", "");
+    shaderProgram.addComputeShader("shader/shader.comp");
+    shaderProgram.Activate();
 
     while(!glfwWindowShouldClose(window)) {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    shaderProgram.Delete();
     std::cout << "\n" << glGetString(GL_VERSION) << std::endl;
     glfwTerminate();
-
     return 0;
 }
