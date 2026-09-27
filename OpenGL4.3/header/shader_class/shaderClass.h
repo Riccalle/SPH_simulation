@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <cerrno>
+#include <array>
 
 std::string getFileContents(const char* fileName);
 
@@ -24,8 +25,10 @@ class Shaders
         void setFloat(std::string &uniformName, float value) const;
         void setFloat2(std::string &uniformName, float value1, float value2) const;
 
-        void addComputeShader(const char * computeDirectory);
-        GLuint computeID;
+        void AddComputeShader(const char * computeDirectory);
+        void ActivateComputeShader(std::array<int, 3> workGroup, GLenum memoryBarrier);
+        void DeleteComputeShader();
+        GLuint computeID = -1;
 };
 
 #endif

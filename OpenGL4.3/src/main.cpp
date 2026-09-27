@@ -1,3 +1,5 @@
+// Trying my first compute shader with a bunch of particles bouncing in a box
+
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
@@ -6,6 +8,10 @@
 
 static const unsigned int width = 900;
 static const unsigned int height = 600;
+
+void framebufferSizeCallback(GLFWwindow * window, int Width, int Height) {
+    glViewport(0, 0, Width, Height);
+}
 
 int main(void) {
     glfwInit();
@@ -22,6 +28,7 @@ int main(void) {
         return -1;
     }
 
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
 
@@ -33,9 +40,12 @@ int main(void) {
 
     glViewport(0, 0, width, height);
 
-    Shaders shaderProgram = Shaders("", "");
-    shaderProgram.addComputeShader("shader/shader.comp");
+    const unsigned int particlesNumber = 1200;
+
+    Shaders shaderProgram = Shaders("shader/shader.vert", "shader/shader.frag");
     shaderProgram.Activate();
+    shaderProgram.AddComputeShader("shader/shader.comp");
+    shaderProgram.ActivateComputeShader({1200, 1, 1}, GL_ALL_BARRIER_BITS);
 
     while(!glfwWindowShouldClose(window)) {
         glfwSwapBuffers(window);
@@ -43,7 +53,7 @@ int main(void) {
     }
 
     shaderProgram.Delete();
-    std::cout << "\n" << glGetString(GL_VERSION) << std::endl;
+    shaderProgram.DeleteComputeShader();
     glfwTerminate();
     return 0;
 }

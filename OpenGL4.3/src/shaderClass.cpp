@@ -99,7 +99,7 @@ void Shaders::setFloat2(std::string &uniformName, float value1, float value2) co
     glUniform2f(glGetUniformLocation(ID, uniformName.c_str()), value1, value2);
 }
 
-void Shaders::addComputeShader(const char * computeDirectory) {
+void Shaders::AddComputeShader(const char * computeDirectory) {
     std::string fileCode = getFileContents(computeDirectory);
     const char * fileContents = fileCode.c_str();
 
@@ -122,4 +122,26 @@ void Shaders::addComputeShader(const char * computeDirectory) {
     glLinkProgram(computeShaderProgram);
 
     Shaders::computeID = computeShaderProgram;
+
+    glDeleteShader(computeShader);
+}
+
+void Shaders::ActivateComputeShader(std::array<int, 3> workGroup, GLenum memoryBarrier) {
+    if (Shaders::computeID == -1) {
+        std::cout << "There is no compute shader!" << std::endl;
+        return;
+    }
+
+    glUseProgram(Shaders::computeID);
+    glDispatchCompute(workGroup[0], workGroup[1], workGroup[2]);
+    glMemoryBarrier(memoryBarrier);
+}
+
+void Shaders::DeleteComputeShader() {
+    if (Shaders::computeID == -1) {
+        std::cout << "There is no compute shader!" << std::endl;
+        return;
+    }
+
+    glDeleteProgram(Shaders::computeID);
 }
