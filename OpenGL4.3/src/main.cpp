@@ -80,13 +80,13 @@ int main(void) {
 
     Shaders shaderProgram = Shaders("shader/shader.vert", "shader/shader.frag");
     shaderProgram.Activate();
-    shaderProgram.AddComputeShader("shader/shader.comp");
-    shaderProgram.ActivateComputeShader({particlesNumber / 120, 1, 1}, GL_ALL_BARRIER_BITS);
+    ComputeShader computeShaderProgram = ComputeShader("shader/shader.comp");
+    computeShaderProgram.Activate({particlesNumber / 120, 1, 1}, GL_ALL_BARRIER_BITS);
 
     glEnable(GL_PROGRAM_POINT_SIZE);
 
-    glUniform1f(glGetUniformLocation(shaderProgram.computeID, "radius"), radius);
-    int deltaTimeUniformLocation = glGetUniformLocation(shaderProgram.computeID, "deltaTime");
+    glUniform1f(glGetUniformLocation(computeShaderProgram.ID, "radius"), radius);
+    int deltaTimeUniformLocation = glGetUniformLocation(computeShaderProgram.ID, "deltaTime");
 
     double lastTime = glfwGetTime();
     double thisTime;
@@ -103,7 +103,7 @@ int main(void) {
             timer = thisTime;
         }
 
-        shaderProgram.ActivateComputeShader({particlesNumber / 128, 1, 1}, GL_ALL_BARRIER_BITS);
+        computeShaderProgram.Activate({particlesNumber / 128, 1, 1}, GL_ALL_BARRIER_BITS);
         glUniform1f(deltaTimeUniformLocation, deltaTime);
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -119,7 +119,7 @@ int main(void) {
 
     std::cout << "\n";
     shaderProgram.Delete();
-    shaderProgram.DeleteComputeShader();
+    computeShaderProgram.Delete();
     glfwTerminate();
     return 0;
 }

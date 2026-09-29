@@ -24,11 +24,15 @@ class Shaders
         void setInt(std::string &uniformName, int value) const;
         void setFloat(std::string &uniformName, float value) const;
         void setFloat2(std::string &uniformName, float value1, float value2) const;
+};
 
-        void AddComputeShader(const char * computeDirectory);
-        void ActivateComputeShader(std::array<int, 3> workGroup, GLenum memoryBarrier);
-        void DeleteComputeShader();
-        GLuint computeID = -1;
+class ComputeShader {
+    public:
+        ComputeShader(const char * directory);
+        GLuint ID;
+
+        void Activate(std::array<int, 3> workGroup, GLenum memoryBarrier);
+        void Delete();
 };
 
 #endif
