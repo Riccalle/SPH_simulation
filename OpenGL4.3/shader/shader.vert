@@ -7,10 +7,11 @@ struct Particle {
 
 layout(std430, binding = 0) buffer Particles {
     Particle p[];
-}
+};
 
 void main() {
     uint i = gl_VertexID;
     vec3 pos = p[i].pos.xyz;
     gl_Position = vec4(pos.xyz, 1.0);
+    gl_PointSize = 3.0;
 }

@@ -49,7 +49,7 @@ int main(void) {
     glViewport(0, 0, width, height);
 
     srand(glfwGetTime());
-    const unsigned int particlesNumber = 1200;
+    const unsigned int particlesNumber = 38400;
     const float radius = 0.08f;
     std::array<Particle, particlesNumber> particles;
     for (int i = 0; i < particlesNumber; i++) {
@@ -58,8 +58,8 @@ int main(void) {
         particles[i].pos.z = 0.0f;
         particles[i].pos.w = 0.0f;
 
-        particles[i].vel.x = 0.05f * (((float)rand() / RAND_MAX) * 2.0f - 1.0f);
-        particles[i].vel.x = 0.05f * (((float)rand() / RAND_MAX) * 2.0f - 1.0f);
+        particles[i].vel.x = 0.5f * (((float)rand() / RAND_MAX) * 2.0f - 1.0f);
+        particles[i].vel.y = 0.5f * (((float)rand() / RAND_MAX) * 2.0f - 1.0f);
         particles[i].vel.z = 0.0f;
         particles[i].vel.w = 0.0f;
     }
@@ -81,25 +81,43 @@ int main(void) {
     Shaders shaderProgram = Shaders("shader/shader.vert", "shader/shader.frag");
     shaderProgram.Activate();
     shaderProgram.AddComputeShader("shader/shader.comp");
+    shaderProgram.ActivateComputeShader({particlesNumber / 120, 1, 1}, GL_ALL_BARRIER_BITS);
+
+    glEnable(GL_PROGRAM_POINT_SIZE);
 
     glUniform1f(glGetUniformLocation(shaderProgram.computeID, "radius"), radius);
+    int deltaTimeUniformLocation = glGetUniformLocation(shaderProgram.computeID, "deltaTime");
 
     double lastTime = glfwGetTime();
     double thisTime;
     double deltaTime;
+    double timer = 0;
 
     while(!glfwWindowShouldClose(window)) {
         thisTime = glfwGetTime();
         deltaTime = thisTime - lastTime;
-        lastTime = glfwGetTime();
+        lastTime = thisTime;
 
-        glUniform1f(glGetUniformLocation(shaderProgram.computeID, "deltaTime"), deltaTime);
-        shaderProgram.ActivateComputeShader({particlesNumber / 120, 1, 1}, GL_ALL_BARRIER_BITS);
+        if (thisTime - timer > 1) {
+            std::cout << "\r\033[32mFrames per second: " << 1 / deltaTime << std::flush;
+            timer = thisTime;
+        }
+
+        shaderProgram.ActivateComputeShader({particlesNumber / 128, 1, 1}, GL_ALL_BARRIER_BITS);
+        glUniform1f(deltaTimeUniformLocation, deltaTime);
+
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        shaderProgram.Activate();
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_POINTS, 0, particlesNumber);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    std::cout << "\n";
     shaderProgram.Delete();
     shaderProgram.DeleteComputeShader();
     glfwTerminate();
