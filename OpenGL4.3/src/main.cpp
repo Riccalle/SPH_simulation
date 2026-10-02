@@ -21,13 +21,6 @@ struct Particle {
     glm::vec4 vel;
 };
 
-struct Grid {
-    float cellSize;
-    unsigned int cellResX;
-    unsigned int cellResY;
-    unsigned int cellTot;
-};
-
 int main(void) {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -124,20 +117,30 @@ int main(void) {
     // This function makes it so the data contained in the SSBO in visibile under binding = 0 to other shaders
 
     // Grid for neighbor research
-    Grid *grid = new Grid();
-    grid->cellSize = radius * 2.0f;
-    grid->cellResX = (unsigned int)std::ceil(2.0f / grid->cellSize);
-    grid->cellResY = (unsigned int)std::ceil(2.0f / grid->cellSize);
-    grid->cellTot = grid->cellResX * grid->cellResY;
+    float cellSize = radius * 2.0f;
+    unsigned int gridResX = (unsigned int)std::ceil(2.0f / cellSize);
+    unsigned int gridResY = (unsigned int)std::ceil(2.0f / cellSize);
+    unsigned int totCell = gridResX * gridResY;
 
-    // New SSBO for neighbor research
-    GLuint NRSSBO;
-    glGenBuffers(1, &NRSSBO);
+    int cellHead[totCell] = {-1}; // flag -1 if the cell is empty
+    int particleNext[particlesNumber] = {-1}; // flag -1 if it contains the last particle
+
+    // New SSBOs for neighbor research
+    GLuint cellHeadSSBO; 
+    glGenBuffers(1, &cellHeadSSBO);
     
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, NRSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, grid->cellTot * sizeof(unsigned int), grid, GL_DYNAMIC_COPY);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cellHeadSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(cellHead), &cellHead, GL_DYNAMIC_COPY);
     
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, NRSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, cellHeadSSBO);
+
+    GLuint particleNextSSBO;
+    glGenBuffers(1, &particleNextSSBO);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleNextSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(particleNext), &particleNext, GL_DYNAMIC_COPY);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleNextSSBO);
 
     // Attributes
 
@@ -188,7 +191,6 @@ int main(void) {
 
     shaderProgram.Delete();
     computeShaderProgram.Delete();
-    delete grid;
 
     glfwTerminate();
     return 0;

@@ -6,20 +6,17 @@ struct Particle {
     vec4 vel;
 };
 
-struct Grid {
-    float cellSize;
-    uint cellResX;
-    uint cellResY;
-    uint cellTot;
-};
-
 layout(std430, binding = 0) buffer Particles {
     Particle p[];
 };
 
-layout(std430, binding = 1) buffer Grid {
-    Grid grid;
+layout(std430, binding = 1) buffer cellHead {
+    int cellHead[];
 };
+
+layout(std430, binding = 2) buffer particleNext {
+    int particleNext[];
+}
 
 uniform float deltaTime;
 uniform float radius;
