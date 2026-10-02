@@ -21,6 +21,13 @@ struct Particle {
     glm::vec4 vel;
 };
 
+struct Grid {
+    float cellSize;
+    unsigned int cellResX;
+    unsigned int cellResY;
+    unsigned int cellTot;
+};
+
 int main(void) {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -64,27 +71,87 @@ int main(void) {
         particles[i].vel.w = 0.0f;
     }
 
+    // VAO
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
 
+    // Data
+
+    unsigned int division = 20;
+    std::vector<GLfloat> meshVert = {0.0f, 0.0f, 0.0f};
+    std::vector<GLuint> meshIndices;
+    for (int i = 0; i < division; i++) {
+        float angle = i * 2 * (float)M_PI / division;
+
+        meshVert.push_back(cosf(angle));
+        meshVert.push_back(sinf(angle));
+        meshVert.push_back(0.0f);
+
+        int X = 0;
+        int Y = i + 1;
+        int Z = (i + 1) % division + 1;
+
+        meshIndices.push_back(X);
+        meshIndices.push_back(Y);
+        meshIndices.push_back(Z);
+    }
+
+    meshVert.shrink_to_fit();
+    meshIndices.shrink_to_fit();
+
+    // meshVBO
+    GLuint meshVBO;
+    glGenBuffers(1, &meshVBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
+    glBufferData(GL_ARRAY_BUFFER, meshVert.size() * sizeof(GLfloat), meshVert.data(), GL_STATIC_DRAW);
+
+    // meshEBO
+    GLuint meshEBO;
+    glGenBuffers(1, &meshEBO);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, meshIndices.size() * sizeof(GLuint), meshIndices.data(), GL_STATIC_DRAW);
+
     GLuint SSBO;
     glGenBuffers(1, &SSBO);
+    
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Particle) * particlesNumber, particles.data(), GL_DYNAMIC_COPY);
     // This function specifies how much memory we want to allocate on the GPU
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, SSBO); 
     // This function makes it so the data contained in the SSBO in visibile under binding = 0 to other shaders
 
+    // Grid for neighbor research
+    Grid *grid = new Grid();
+    grid->cellSize = radius * 2.0f;
+    grid->cellResX = (unsigned int)std::ceil(2.0f / grid->cellSize);
+    grid->cellResY = (unsigned int)std::ceil(2.0f / grid->cellSize);
+    grid->cellTot = grid->cellResX * grid->cellResY;
+
+    // New SSBO for neighbor research
+    GLuint NRSSBO;
+    glGenBuffers(1, &NRSSBO);
+    
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, NRSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, grid->cellTot * sizeof(unsigned int), grid, GL_DYNAMIC_COPY);
+    
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, NRSSBO);
+
+    // Attributes
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
+
     // Shaders
 
     Shaders shaderProgram = Shaders("shader/shader.vert", "shader/shader.frag");
     shaderProgram.Activate();
     ComputeShader computeShaderProgram = ComputeShader("shader/shader.comp");
-    computeShaderProgram.Activate({particlesNumber / 120, 1, 1}, GL_ALL_BARRIER_BITS);
-
-    glEnable(GL_PROGRAM_POINT_SIZE);
-
+    
+    glUniform1f(glGetUniformLocation(shaderProgram.ID, "radius"), radius);
+    computeShaderProgram.Activate({particlesNumber / 128, 1, 1}, GL_ALL_BARRIER_BITS);
     glUniform1f(glGetUniformLocation(computeShaderProgram.ID, "radius"), radius);
     int deltaTimeUniformLocation = glGetUniformLocation(computeShaderProgram.ID, "deltaTime");
 
@@ -111,15 +178,18 @@ int main(void) {
 
         shaderProgram.Activate();
         glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, particlesNumber);
+        glDrawElementsInstanced(GL_TRIANGLES, meshIndices.size(), GL_UNSIGNED_INT, 0, particlesNumber);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     std::cout << "\n";
+
     shaderProgram.Delete();
     computeShaderProgram.Delete();
+    delete grid;
+
     glfwTerminate();
     return 0;
 }
