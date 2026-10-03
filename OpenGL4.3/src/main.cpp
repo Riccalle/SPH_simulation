@@ -23,7 +23,7 @@ struct Particle {
        16 bytes of memory, so we use vec4 instead of vec3
        Since we don't use the z and w component of neither
        vel or pos, instead of creating a density variable,
-       We can just use pos z component
+       We can just use pos w component
     */ 
 };
 
@@ -186,16 +186,21 @@ int main(void) {
         glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &clearValue);
 
         glUseProgram(computeShaderProgram.ID);
-        glUniform1i(phaseUniformLocation, false);
+        glUniform1i(phaseUniformLocation, 0);
         glDispatchCompute(particlesNumber / 128, 1, 1);
 
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // Wait for everyone to have registered into the gri
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // Wait for everyone to have registered into the grid
     
-        glUniform1i(phaseUniformLocation, true);
+        glUniform1i(phaseUniformLocation, 1);
+        glDispatchCompute(particlesNumber / 128, 1, 1);
+
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+        glUniform1i(phaseUniformLocation, 2);
         glUniform1f(deltaTimeUniformLocation, deltaTime);
         glDispatchCompute(particlesNumber / 128, 1, 1);
 
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);

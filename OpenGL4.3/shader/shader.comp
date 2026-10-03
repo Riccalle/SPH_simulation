@@ -21,21 +21,48 @@ layout(std430, binding = 2) buffer particleNextBuffer {
 uniform float deltaTime;
 uniform float radius;
 uniform ivec2 gridRes;
-uniform bool phase;
+uniform int phase;
+
+float pi = 3.141592653589792;
+
+float densityKernel(float influenceRadius, float dist) {
+    float k = 4.0 / (pi * pow(influenceRadius, 8));
+    float delta = influenceRadius * influenceRadius - dist * dist;
+    return k * delta * delta * delta;
+}
+
+float computePressure(float stiffness, float targetDensity, float density) {
+    return max(stiffness * (density - targetDensity), 0.0f);
+}
+
+vec2 pressureGradient(vec2 dist, float influenceRadius) {
+    float k = -30.0 / (pi * pow(influenceRadius, 5));
+    float radiusValue = length(dist);
+    float coeff = (influenceRadius - radiusValue) * (influenceRadius - radiusValue) / radiusValue;
+
+    return coeff * dist;
+}
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
 
     // Global physics variables
-    float influenceRadius = radius * 2;
-    float cellSize = influenceRadius;
+    const float influenceRadius = radius * 2;
+    const float cellSize = influenceRadius;
+    
+    const float mass = 1.0f;
+    const float stiffness = 200.0f;
+    const float targetDensity = 1000.0f;
+
+    float density = 0.0f;
+    float pressure = 0.0f;
 
     // Filling the grid (linked list)
     vec2 pos = p[i].pos.xy;
     ivec2 cellCord = ivec2(floor((pos + vec2(1.0)) / cellSize));
     cellCord = clamp(cellCord, ivec2(0), gridRes - ivec2(1));
     int cellID = cellCord.x + cellCord.y * gridRes.x;
-    if (!phase) {
+    if (phase == 0) {
         particleNext[i] = atomicExchange(cellHead[cellID], int(i));
         return;
     }
@@ -60,12 +87,21 @@ void main() {
 
                     if (delta < influenceRadius) {
                         // Calculating forces
+                        density += mass * densityKernel(influenceRadius, delta);
+                        
+                        if (phase == 2) {
+                            pressure = computePressure(stiffness, targetDensity, p[i].pos.w);
+                        }
                     }
                 }
-
                 neighborIndex = particleNext[neighborIndex];
             }
         }
+    }
+
+    if (phase == 1) {
+        p[i].pos.w = density;
+        return;
     }
 
     // Update and collisions
