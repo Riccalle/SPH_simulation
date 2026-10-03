@@ -32,7 +32,7 @@ float densityKernel(float influenceRadius, float dist) {
 }
 
 float computePressure(float stiffness, float targetDensity, float density) {
-    return max(stiffness * (density - targetDensity), 0.0f);
+    return max(stiffness * (density - targetDensity), 0.0);
 }
 
 vec2 pressureGradient(vec2 dist, float influenceRadius) {
@@ -43,6 +43,20 @@ vec2 pressureGradient(vec2 dist, float influenceRadius) {
     return coeff * dist;
 }
 
+vec2 pressureForce(
+    vec2 dist,
+    float influenceRadius,
+    float mass,
+    float pressure,
+    float neighborPressure,
+    float neighborDensity
+) {
+    vec2 grad = pressureGradient(dist, influenceRadius);
+    float rhoj = max(neighborDensity, 1e-6);
+
+    return - mass * (pressure + neighborPressure) / (2.0 * rhoj) * pressureGrad;
+}
+
 void main() {
     uint i = gl_GlobalInvocationID.x;
 
@@ -50,12 +64,15 @@ void main() {
     const float influenceRadius = radius * 2;
     const float cellSize = influenceRadius;
     
-    const float mass = 1.0f;
-    const float stiffness = 200.0f;
-    const float targetDensity = 1000.0f;
+    const float mass = 1.0;
+    const float stiffness = 200.0;
+    const float targetDensity = 1000.0;
+    const float collisionDamping = 0.4;
+    const float gravity = 9.8;
 
-    float density = 0.0f;
-    float pressure = 0.0f;
+    float density = 0.0;
+    float pressure = 0.0;
+    float force = 0.0;
 
     // Filling the grid (linked list)
     vec2 pos = p[i].pos.xy;
@@ -91,6 +108,11 @@ void main() {
                         
                         if (phase == 2) {
                             pressure = computePressure(stiffness, targetDensity, p[i].pos.w);
+                            p[i].vel.w = pressure;
+                        }
+
+                        if (phase == 3) {
+                            force = pressureForce(delta, influenceRadius, mass, pressure, p[neighborIndex].vel.w, p[neighborIndex].pos.w);
                         }
                     }
                 }
@@ -105,16 +127,22 @@ void main() {
     }
 
     // Update and collisions
-
-    p[i].pos.xyz += p[i].vel.xyz * deltaTime;
+    force += vec2(0.0, -gravity);
+    vec2 acc = force / p[i].pos.w;
+    p[i].vel.xy += acc * deltaTime;
+    p[i].pos.xy += p[i].vel.xy * deltaTime;
 
     if (p[i].pos.x > 1.0 - radius || p[i].pos.x < radius - 1.0) {
-        p[i].vel.x *= -1;
+        p[i].vel.x *= -collisionDamping;
         p[i].pos.x = (1.0 - radius) * sign(p[i].pos.x);
     }
 
     if (p[i].pos.y > 1.0 - radius || p[i].pos.y < radius - 1.0) {
-        p[i].vel.y *= -1;
+        p[i].vel.y *= -collisionDamping;
         p[i].pos.y = (1.0 - radius) * sign(p[i].pos.y);
     }
+
+    // Artificial friction
+    p[i].vel.y *= 0.999;
+    p[i].vel.x *= 0.999;
 }

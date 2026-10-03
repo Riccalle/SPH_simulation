@@ -197,6 +197,11 @@ int main(void) {
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
         glUniform1i(phaseUniformLocation, 2);
+        glDispatchCompute(particlesNumber / 128, 1, 1);
+
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+        glUniform1i(phaseUniformLocation, 3);
         glUniform1f(deltaTimeUniformLocation, deltaTime);
         glDispatchCompute(particlesNumber / 128, 1, 1);
 
