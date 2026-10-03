@@ -17,8 +17,14 @@ void framebufferSizeCallback(GLFWwindow * window, int Width, int Height) {
 }
 
 struct Particle {
-    glm::vec4 pos;
+    glm::vec4 pos; 
     glm::vec4 vel;
+    /* Hardawre rules states that allocating vector memory takes up
+       16 bytes of memory, so we use vec4 instead of vec3
+       Since we don't use the z and w component of neither
+       vel or pos, instead of creating a density variable,
+       We can just use pos z component
+    */ 
 };
 
 int main(void) {
@@ -50,7 +56,7 @@ int main(void) {
 
     srand(glfwGetTime());
     const unsigned int particlesNumber = 38400;
-    const float radius = 0.08f;
+    const float radius = 0.005f;
     std::array<Particle, particlesNumber> particles;
     for (int i = 0; i < particlesNumber; i++) {
         particles[i].pos.x = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
@@ -122,15 +128,15 @@ int main(void) {
     unsigned int gridResY = (unsigned int)std::ceil(2.0f / cellSize);
     unsigned int totCell = gridResX * gridResY;
 
-    int cellHead[totCell] = {-1}; // flag -1 if the cell is empty
-    int particleNext[particlesNumber] = {-1}; // flag -1 if it contains the last particle
+    int cellHead[totCell]; // flag -1 if the cell is empty
+    int particleNext[particlesNumber]; // flag -1 if it contains the last particle
 
     // New SSBOs for neighbor research
     GLuint cellHeadSSBO; 
     glGenBuffers(1, &cellHeadSSBO);
     
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, cellHeadSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(cellHead), &cellHead, GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, totCell * sizeof(int), nullptr, GL_DYNAMIC_COPY);
     
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, cellHeadSSBO);
 
@@ -138,7 +144,7 @@ int main(void) {
     glGenBuffers(1, &particleNextSSBO);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleNextSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(particleNext), &particleNext, GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, particlesNumber * sizeof(int), nullptr, GL_DYNAMIC_COPY);
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, particleNextSSBO);
 
@@ -156,7 +162,9 @@ int main(void) {
     glUniform1f(glGetUniformLocation(shaderProgram.ID, "radius"), radius);
     computeShaderProgram.Activate({particlesNumber / 128, 1, 1}, GL_ALL_BARRIER_BITS);
     glUniform1f(glGetUniformLocation(computeShaderProgram.ID, "radius"), radius);
+    glUniform2i(glGetUniformLocation(computeShaderProgram.ID, "gridRes"), gridResX, gridResY);
     int deltaTimeUniformLocation = glGetUniformLocation(computeShaderProgram.ID, "deltaTime");
+    int phaseUniformLocation = glGetUniformLocation(computeShaderProgram.ID, "phase");
 
     double lastTime = glfwGetTime();
     double thisTime;
@@ -173,8 +181,21 @@ int main(void) {
             timer = thisTime;
         }
 
-        computeShaderProgram.Activate({particlesNumber / 128, 1, 1}, GL_ALL_BARRIER_BITS);
+        int clearValue = -1;
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, cellHeadSSBO);
+        glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &clearValue);
+
+        glUseProgram(computeShaderProgram.ID);
+        glUniform1i(phaseUniformLocation, false);
+        glDispatchCompute(particlesNumber / 128, 1, 1);
+
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // Wait for everyone to have registered into the gri
+    
+        glUniform1i(phaseUniformLocation, true);
         glUniform1f(deltaTimeUniformLocation, deltaTime);
+        glDispatchCompute(particlesNumber / 128, 1, 1);
+
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
