@@ -6,3 +6,10 @@ OpenGL4.3/header/glad/
 OpenGL4.3/header/glm/
 OpenGL4.3/header/KHR/
 OpenGL4.3/src/glad.cpp
+
+*.exe
+*.dll
+*.o
+*.obj
+
+.vscode/
