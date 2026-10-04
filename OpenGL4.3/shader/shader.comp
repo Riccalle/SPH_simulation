@@ -40,7 +40,7 @@ vec2 pressureGradient(vec2 dist, float influenceRadius) {
     float radiusValue = length(dist);
     float coeff = (influenceRadius - radiusValue) * (influenceRadius - radiusValue) / radiusValue;
 
-    return coeff * dist;
+    return k * coeff * dist;
 }
 
 vec2 pressureForce(
@@ -63,10 +63,9 @@ void main() {
     // Global physics variables
     const float influenceRadius = radius * 2;
     const float cellSize = influenceRadius;
-    
     const float mass = 1.0;
     const float stiffness = 200.0;
-    const float targetDensity = 1000.0;
+    const float targetDensity = 800000.0;
     const float collisionDamping = 0.4;
     const float gravity = 9.8;
 
@@ -85,7 +84,6 @@ void main() {
     // Calculating density on phase 2
     if (phase == 1) {
         float density = 0.0;
-
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 ivec2 neighborCell = cellCord + ivec2(dx, dy);
@@ -98,22 +96,18 @@ void main() {
                 int neighborIndex = cellHead[neighborCellID];
 
                 while (neighborIndex != -1) { // While the cell is not empty
-                    if (neighborIndex != int(i)) { // If the last particle is not itself
-                        // Found a neighbor
-                        vec3 neighborPos = p[neighborIndex].pos.xyz;
-                        float delta = length(pos - neighborPos.xy);
+                    vec2 neighborPos = p[neighborIndex].pos.xy;
+                    float distScalar = length(pos - neighborPos);
 
-                        if (delta < influenceRadius) {
-                            // Calculating forces
-                            density += mass * densityKernel(influenceRadius, delta);
-                        }
-                    }
+                    if (distScalar < influenceRadius) 
+                        density += mass * densityKernel(influenceRadius, distScalar);
+
                     neighborIndex = particleNext[neighborIndex];
                 }
             }
         }
 
-        p[i].pos.w = density;
+        p[i].pos.w = max(density, 1e-6);
         return;
     }
 
@@ -139,26 +133,27 @@ void main() {
                     || neighborCell.y < 0 
                     || neighborCell.y >= gridRes.y)
                     continue;
+                
                 int neighborCellID = neighborCell.x + neighborCell.y * gridRes.x;
                 int neighborIndex = cellHead[neighborCellID];
 
                 while (neighborIndex != -1) { // While the cell is not empty
                     if (neighborIndex != int(i)) { // If the last particle is not itself
                         // Found a neighbor
-                        vec3 neighborPos = p[neighborIndex].pos.xyz;
-                        float delta = length(pos - neighborPos.xy);
+                        vec2 neighborPos = p[neighborIndex].pos.xy;
+                        vec2 distVec = neighborPos - pos;
+                        float delta = length(distVec);
 
-                        if (delta < influenceRadius) {
+                        if (delta < influenceRadius && delta > 1e-6) {
                             // Calculating forces
-                            if (phase == 3) {
-                                force += pressureForce(delta,
+                            force += pressureForce(
+                                distVec,
                                 influenceRadius,
                                 mass,
                                 pressure,
                                 p[neighborIndex].vel.w,
                                 p[neighborIndex].pos.w
-                                );
-                            }
+                            );
                         }
                     }
                     neighborIndex = particleNext[neighborIndex];
@@ -183,7 +178,8 @@ void main() {
         }
 
         // Artificial friction
-        p[i].vel.y *= 0.999;
-        p[i].vel.x *= 0.999;
+        p[i].vel.y *= 0.993;
+        p[i].vel.x *= 0.993;
+        return;
     }
 }
