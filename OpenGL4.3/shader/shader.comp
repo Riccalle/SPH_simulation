@@ -70,10 +70,6 @@ void main() {
     const float collisionDamping = 0.4;
     const float gravity = 9.8;
 
-    float density = 0.0;
-    float pressure = 0.0;
-    vec2 force = vec2(0.0, 0.0);
-
     // Filling the grid (linked list)
     vec2 pos = p[i].pos.xy;
     ivec2 cellCord = ivec2(floor((pos + vec2(1.0)) / cellSize));
@@ -88,6 +84,8 @@ void main() {
 
     // Calculating density on phase 2
     if (phase == 1) {
+        float density = 0.0;
+
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 ivec2 neighborCell = cellCord + ivec2(dx, dy);
@@ -121,64 +119,71 @@ void main() {
 
     // Calculating pressure on phase 2
     if (phase == 2) {
-        pressure = computePressure(stiffness, targetDensity, p[i].pos.w);
+        float density = p[i].pos.w;
+        float pressure = computePressure(stiffness, targetDensity, density);
         p[i].vel.w = pressure;
         return;
     }
 
     // Neighbor research
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dy = -1; dy <= 1; dy++) {
-            ivec2 neighborCell = cellCord + ivec2(dx, dy);
-            if (neighborCell.x < 0 
-                || neighborCell.x >= gridRes.x 
-                || neighborCell.y < 0 
-                || neighborCell.y >= gridRes.y)
-                continue;
-            int neighborCellID = neighborCell.x + neighborCell.y * gridRes.x;
-            int neighborIndex = cellHead[neighborCellID];
-            
-            while (neighborIndex != -1) { // While the cell is not empty
-                if (neighborIndex != int(i)) { // If the last particle is not itself
-                    // Found a neighbor
-                    vec3 neighborPos = p[neighborIndex].pos.xyz;
-                    float delta = length(pos - neighborPos.xy);
+    if (phase == 3) {
+        vec2 force = vec2(0.0, 0.0);
+        float density = p[i].pos.w;
+        float pressure = p[i].vel.w;
 
-                    if (delta < influenceRadius) {
-                        // Calculating forces
-                        if (phase == 3) {
-                            force += pressureForce(delta,
-                            influenceRadius,
-                            mass,
-                            pressure,
-                            p[neighborIndex].vel.w,
-                            p[neighborIndex].pos.w
-                            );
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                ivec2 neighborCell = cellCord + ivec2(dx, dy);
+                if (neighborCell.x < 0 
+                    || neighborCell.x >= gridRes.x 
+                    || neighborCell.y < 0 
+                    || neighborCell.y >= gridRes.y)
+                    continue;
+                int neighborCellID = neighborCell.x + neighborCell.y * gridRes.x;
+                int neighborIndex = cellHead[neighborCellID];
+
+                while (neighborIndex != -1) { // While the cell is not empty
+                    if (neighborIndex != int(i)) { // If the last particle is not itself
+                        // Found a neighbor
+                        vec3 neighborPos = p[neighborIndex].pos.xyz;
+                        float delta = length(pos - neighborPos.xy);
+
+                        if (delta < influenceRadius) {
+                            // Calculating forces
+                            if (phase == 3) {
+                                force += pressureForce(delta,
+                                influenceRadius,
+                                mass,
+                                pressure,
+                                p[neighborIndex].vel.w,
+                                p[neighborIndex].pos.w
+                                );
+                            }
                         }
                     }
+                    neighborIndex = particleNext[neighborIndex];
                 }
-                neighborIndex = particleNext[neighborIndex];
             }
         }
+
+        // Update and collisions
+        force += vec2(0.0, -gravity * density);
+        vec2 acc = force / density;
+        p[i].vel.xy += acc * deltaTime;
+        p[i].pos.xy += p[i].vel.xy * deltaTime;
+
+        if (p[i].pos.x > 1.0 - radius || p[i].pos.x < radius - 1.0) {
+            p[i].vel.x *= -collisionDamping;
+            p[i].pos.x = (1.0 - radius) * sign(p[i].pos.x);
+        }
+
+        if (p[i].pos.y > 1.0 - radius || p[i].pos.y < radius - 1.0) {
+            p[i].vel.y *= -collisionDamping;
+            p[i].pos.y = (1.0 - radius) * sign(p[i].pos.y);
+        }
+
+        // Artificial friction
+        p[i].vel.y *= 0.999;
+        p[i].vel.x *= 0.999;
     }
-
-    // Update and collisions
-    force += vec2(0.0, -gravity * density);
-    vec2 acc = force / density;
-    p[i].vel.xy += acc * deltaTime;
-    p[i].pos.xy += p[i].vel.xy * deltaTime;
-
-    if (p[i].pos.x > 1.0 - radius || p[i].pos.x < radius - 1.0) {
-        p[i].vel.x *= -collisionDamping;
-        p[i].pos.x = (1.0 - radius) * sign(p[i].pos.x);
-    }
-
-    if (p[i].pos.y > 1.0 - radius || p[i].pos.y < radius - 1.0) {
-        p[i].vel.y *= -collisionDamping;
-        p[i].pos.y = (1.0 - radius) * sign(p[i].pos.y);
-    }
-
-    // Artificial friction
-    p[i].vel.y *= 0.999;
-    p[i].vel.x *= 0.999;
 }
