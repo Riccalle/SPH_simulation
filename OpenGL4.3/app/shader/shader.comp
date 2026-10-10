@@ -18,7 +18,6 @@ layout(std430, binding = 2) buffer particleNextBuffer {
     int particleNext[];
 };
 
-uniform float deltaTime;
 uniform float radius;
 uniform ivec2 gridRes;
 uniform int phase;
@@ -37,7 +36,7 @@ float computePressure(float stiffness, float targetDensity, float density) {
 
 vec2 pressureGradient(vec2 dist, float influenceRadius) {
     float k = -30.0 / (pi * pow(influenceRadius, 5));
-    float radiusValue = length(dist);
+    float radiusValue = max(length(dist), 1e-4);
     float coeff = (influenceRadius - radiusValue) * (influenceRadius - radiusValue) / radiusValue;
 
     return k * coeff * dist;
@@ -61,13 +60,15 @@ void main() {
     uint i = gl_GlobalInvocationID.x;
 
     // Global physics variables
-    const float influenceRadius = radius * 2;
+    const float influenceRadius = 0.013;
     const float cellSize = influenceRadius;
-    const float mass = 1.0;
+    const float mass = 0.013;
     const float stiffness = 200.0;
-    const float targetDensity = 800000.0;
+    const float targetDensity = 1000.0;
     const float collisionDamping = 0.4;
     const float gravity = 9.8;
+    const float deltaTime = 0.0008;
+    const float viscosity = 1.5;
 
     // Filling the grid (linked list)
     vec2 pos = p[i].pos.xy;
@@ -107,20 +108,13 @@ void main() {
             }
         }
 
-        p[i].pos.w = max(density, 1e-6);
-        return;
-    }
-
-    // Calculating pressure on phase 2
-    if (phase == 2) {
-        float density = p[i].pos.w;
-        float pressure = computePressure(stiffness, targetDensity, density);
-        p[i].vel.w = pressure;
+        p[i].pos.w = max(density, 1e-6); // Density
+        p[i].vel.w = computePressure(stiffness, targetDensity, density); // Pressure
         return;
     }
 
     // Neighbor research
-    if (phase == 3) {
+    if (phase == 2) {
         vec2 force = vec2(0.0, 0.0);
         float density = p[i].pos.w;
         float pressure = p[i].vel.w;
@@ -141,11 +135,12 @@ void main() {
                     if (neighborIndex != int(i)) { // If the last particle is not itself
                         // Found a neighbor
                         vec2 neighborPos = p[neighborIndex].pos.xy;
-                        vec2 distVec = neighborPos - pos;
+                        vec2 distVec = pos - neighborPos;
                         float delta = length(distVec);
 
                         if (delta < influenceRadius && delta > 1e-6) {
                             // Calculating forces
+                            // 1. pressure force
                             force += pressureForce(
                                 distVec,
                                 influenceRadius,
@@ -154,6 +149,11 @@ void main() {
                                 p[neighborIndex].vel.w,
                                 p[neighborIndex].pos.w
                             );
+
+                            // 2. viscosity force
+                            vec2 velDiff = p[neighborIndex].vel.xy - p[i].vel.xy;
+                            float viscKernelLapl = (40.0 / (pi * pow(influenceRadius, 5.0))) * (influenceRadius - delta);
+                            force += viscosity * mass * viscKernelLapl * (velDiff / max(p[neighborIndex].pos.w, 1e-6));
                         }
                     }
                     neighborIndex = particleNext[neighborIndex];

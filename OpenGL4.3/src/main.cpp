@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "../header/shader_class/shaderClass.h"
+#include "../header/SPHheader/spawner2D.h"
 
 static const unsigned int width = 900;
 static const unsigned int height = 600;
@@ -44,7 +45,7 @@ int main(void) {
 
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0);
+    glfwSwapInterval(1);
 
     int version = gladLoadGL(glfwGetProcAddress);
     if (version == 0) {
@@ -57,15 +58,26 @@ int main(void) {
     srand(glfwGetTime());
     const unsigned int particlesNumber = 38400;
     const float radius = 0.005f;
-    std::array<Particle, particlesNumber> particles;
+
+    SpawnRegion spawnRegion = {
+        glm::vec2(0.0f, 0.0f),
+        glm::vec2(0.7f, 0.7f)
+    };
+
+    float spawnDensity = particlesNumber / (spawnRegion.size.x * spawnRegion.size.y);
+
+    std::vector<Particle> particles(particlesNumber);
+    std::vector<glm::vec3> pos = std::vector<glm::vec3>();
+    pos = pointGrid(spawnRegion, spawnDensity, 0.0f);
+
     for (int i = 0; i < particlesNumber; i++) {
-        particles[i].pos.x = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
-        particles[i].pos.y = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
+        particles[i].pos.x = pos[i].x;
+        particles[i].pos.y = pos[i].y;
         particles[i].pos.z = 0.0f;
         particles[i].pos.w = 0.0f;
 
-        particles[i].vel.x = 0.5f * (((float)rand() / RAND_MAX) * 2.0f - 1.0f);
-        particles[i].vel.y = 0.5f * (((float)rand() / RAND_MAX) * 2.0f - 1.0f);
+        particles[i].vel.x = 0.0f;
+        particles[i].vel.y = 0.0f;
         particles[i].vel.z = 0.0f;
         particles[i].vel.w = 0.0f;
     }
@@ -128,9 +140,6 @@ int main(void) {
     unsigned int gridResY = (unsigned int)std::ceil(2.0f / cellSize);
     unsigned int totCell = gridResX * gridResY;
 
-    int cellHead[totCell]; // flag -1 if the cell is empty
-    int particleNext[particlesNumber]; // flag -1 if it contains the last particle
-
     // New SSBOs for neighbor research
     GLuint cellHeadSSBO; 
     glGenBuffers(1, &cellHeadSSBO);
@@ -160,10 +169,9 @@ int main(void) {
     ComputeShader computeShaderProgram = ComputeShader("shader/shader.comp");
     
     glUniform1f(glGetUniformLocation(shaderProgram.ID, "radius"), radius);
-    computeShaderProgram.Activate({particlesNumber / 128, 1, 1}, GL_ALL_BARRIER_BITS);
+    glUseProgram(computeShaderProgram.ID);
     glUniform1f(glGetUniformLocation(computeShaderProgram.ID, "radius"), radius);
     glUniform2i(glGetUniformLocation(computeShaderProgram.ID, "gridRes"), gridResX, gridResY);
-    int deltaTimeUniformLocation = glGetUniformLocation(computeShaderProgram.ID, "deltaTime");
     int phaseUniformLocation = glGetUniformLocation(computeShaderProgram.ID, "phase");
 
     double lastTime = glfwGetTime();
@@ -181,31 +189,27 @@ int main(void) {
             timer = thisTime;
         }
 
-        int clearValue = -1;
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, cellHeadSSBO);
-        glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &clearValue);
+        for (int i = 0; i < 8; i++) {
+            int clearValue = -1;
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, cellHeadSSBO);
+            glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32I, GL_RED_INTEGER, GL_INT, &clearValue);
 
-        glUseProgram(computeShaderProgram.ID);
-        glUniform1i(phaseUniformLocation, 0);
-        glDispatchCompute(particlesNumber / 128, 1, 1);
+            glUseProgram(computeShaderProgram.ID);
+            glUniform1i(phaseUniformLocation, 0);
+            glDispatchCompute(particlesNumber / 128, 1, 1);
 
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // Wait for everyone to have registered into the grid
-    
-        glUniform1i(phaseUniformLocation, 1);
-        glDispatchCompute(particlesNumber / 128, 1, 1);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // Wait for everyone to have registered into the grid
+        
+            glUniform1i(phaseUniformLocation, 1);
+            glDispatchCompute(particlesNumber / 128, 1, 1);
 
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-        glUniform1i(phaseUniformLocation, 2);
-        glDispatchCompute(particlesNumber / 128, 1, 1);
+            glUniform1i(phaseUniformLocation, 2);
+            glDispatchCompute(particlesNumber / 128, 1, 1);
 
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-        glUniform1i(phaseUniformLocation, 3);
-        glUniform1f(deltaTimeUniformLocation, deltaTime);
-        glDispatchCompute(particlesNumber / 128, 1, 1);
-
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        }
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
