@@ -1,4 +1,6 @@
-// Trying my first compute shader with a bunch of particles bouncing in a box
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -27,6 +29,25 @@ struct Particle {
        We can just use pos w component
     */ 
 };
+
+void resetParticles(SpawnRegion spawnRegion, int particlesNumber, std::vector<Particle> &particles) {
+    float spawnDensity = particlesNumber / (spawnRegion.size.x * spawnRegion.size.y);
+    std::vector<glm::vec3> pos = std::vector<glm::vec3>();
+    particles = std::vector<Particle>(particlesNumber);
+    pos = pointGrid(spawnRegion, spawnDensity, 0.0f);
+
+    for (int i = 0; i < particlesNumber; i++) {
+        particles[i].pos.x = pos[i].x;
+        particles[i].pos.y = pos[i].y;
+        particles[i].pos.z = 0.0f;
+        particles[i].pos.w = 0.0f;
+
+        particles[i].vel.x = 0.0f;
+        particles[i].vel.y = 0.0f;
+        particles[i].vel.z = 0.0f;
+        particles[i].vel.w = 0.0f;
+    }
+}
 
 int main(void) {
     glfwInit();
@@ -64,23 +85,8 @@ int main(void) {
         glm::vec2(0.7f, 0.7f)
     };
 
-    float spawnDensity = particlesNumber / (spawnRegion.size.x * spawnRegion.size.y);
-
     std::vector<Particle> particles(particlesNumber);
-    std::vector<glm::vec3> pos = std::vector<glm::vec3>();
-    pos = pointGrid(spawnRegion, spawnDensity, 0.0f);
-
-    for (int i = 0; i < particlesNumber; i++) {
-        particles[i].pos.x = pos[i].x;
-        particles[i].pos.y = pos[i].y;
-        particles[i].pos.z = 0.0f;
-        particles[i].pos.w = 0.0f;
-
-        particles[i].vel.x = 0.0f;
-        particles[i].vel.y = 0.0f;
-        particles[i].vel.z = 0.0f;
-        particles[i].vel.w = 0.0f;
-    }
+    resetParticles(spawnRegion, particlesNumber, particles);
 
     // VAO
     GLuint VAO;
@@ -179,6 +185,16 @@ int main(void) {
     double deltaTime;
     double timer = 0;
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 430");
+
+    int particlesNumberGui = particlesNumber;
+    bool click = false;
+
     while(!glfwWindowShouldClose(window)) {
         thisTime = glfwGetTime();
         deltaTime = thisTime - lastTime;
@@ -214,15 +230,39 @@ int main(void) {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
         shaderProgram.Activate();
         glBindVertexArray(VAO);
         glDrawElementsInstanced(GL_TRIANGLES, meshIndices.size(), GL_UNSIGNED_INT, 0, particlesNumber);
+
+        ImGui::Begin("test");
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
+
+        ImGui::Text("Hi this is text");
+        ImGui::SliderInt("particles number", &particlesNumberGui, 1, 200000);
+
+        if (ImGui::Button("Launch")) {
+            // Some logic, maybe change the particles number and reset the particles position
+        }
+
+        ImGui::PopStyleVar();
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     std::cout << "\n";
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     shaderProgram.Delete();
     computeShaderProgram.Delete();

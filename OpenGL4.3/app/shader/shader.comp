@@ -64,7 +64,7 @@ void main() {
     const float cellSize = influenceRadius;
     const float mass = 0.013;
     const float stiffness = 200.0;
-    const float targetDensity = 1000.0;
+    const float targetDensity = 400.0;
     const float collisionDamping = 0.4;
     const float gravity = 9.8;
     const float deltaTime = 0.0008;
