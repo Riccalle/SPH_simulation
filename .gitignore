@@ -7,6 +7,9 @@ OpenGL4.3/header/glm/
 OpenGL4.3/header/KHR/
 OpenGL4.3/src/glad.cpp
 
+OpenGL4.3/src/imgui/
+OpenGL4.3/header/imgui/
+
 *.exe
 *.dll
 *.o
