@@ -3,9 +3,8 @@
 This is a weakly compressible smoothed particles hydrodynamics simulation
 running in C++ using GLFW and OpenGL with GLAD.
 
-There are many things missing right now but a liquid form can already be seen
+There are two simulations: the first one, OpenGL3.3, calculates forces using the CPU. OpenGL4.3 instead uses compute shader and makes the GPU do all the calculations
 
 ## How to play with it
 
-Once I put the right dlls in the app.exe file, it can just be opened and it will execute
-For now you have to have C++ and glfw installed 
+To play with the SPH simulation you can click on code in the github repo and download zip. You then have to open app.exe.
