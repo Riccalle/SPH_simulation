@@ -77,7 +77,7 @@ int main(void) {
     glViewport(0, 0, width, height);
 
     srand(glfwGetTime());
-    const unsigned int particlesNumber = 38400;
+    int particlesNumber = 38400;
     const float radius = 0.005f;
 
     SpawnRegion spawnRegion = {
@@ -180,6 +180,32 @@ int main(void) {
     glUniform2i(glGetUniformLocation(computeShaderProgram.ID, "gridRes"), gridResX, gridResY);
     int phaseUniformLocation = glGetUniformLocation(computeShaderProgram.ID, "phase");
 
+    float mass = 0.013f;
+    float stiffness = 200.0f;
+    float targetDensity = 400.0f;
+    float collisionDamping = 0.4f;
+    float gravity = 9.8f;
+    float fixedDeltaTime = 0.0008f;
+    float viscosity = 1.5f;
+
+    GLint UniformLocations[] = {
+        glGetUniformLocation(computeShaderProgram.ID, "mass"),
+        glGetUniformLocation(computeShaderProgram.ID, "stiffness"),
+        glGetUniformLocation(computeShaderProgram.ID, "targetDensity"),
+        glGetUniformLocation(computeShaderProgram.ID, "collisionDamping"),
+        glGetUniformLocation(computeShaderProgram.ID, "gravity"),
+        glGetUniformLocation(computeShaderProgram.ID, "deltaTime"),
+        glGetUniformLocation(computeShaderProgram.ID, "viscosity")
+    };
+
+    glUniform1f(UniformLocations[0], mass);
+    glUniform1f(UniformLocations[1], stiffness);
+    glUniform1f(UniformLocations[2], targetDensity);
+    glUniform1f(UniformLocations[3], collisionDamping);
+    glUniform1f(UniformLocations[4], gravity);
+    glUniform1f(UniformLocations[5], fixedDeltaTime);
+    glUniform1f(UniformLocations[6], viscosity);
+
     double lastTime = glfwGetTime();
     double thisTime;
     double deltaTime;
@@ -193,7 +219,8 @@ int main(void) {
     ImGui_ImplOpenGL3_Init("#version 430");
 
     int particlesNumberGui = particlesNumber;
-    bool click = false;
+    float spawnPos[2] = {spawnRegion.position.x, spawnRegion.position.y};
+    float spawnSize[2] = {spawnRegion.size.x, spawnRegion.size.y};
 
     while(!glfwWindowShouldClose(window)) {
         thisTime = glfwGetTime();
@@ -238,14 +265,49 @@ int main(void) {
         glBindVertexArray(VAO);
         glDrawElementsInstanced(GL_TRIANGLES, meshIndices.size(), GL_UNSIGNED_INT, 0, particlesNumber);
 
-        ImGui::Begin("test");
+        ImGui::Begin("Physics variables");
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
 
-        ImGui::Text("Hi this is text");
+        ImGui::Text("Particles number will always be round to a multiple of 128");
         ImGui::SliderInt("particles number", &particlesNumberGui, 1, 200000);
 
+        ImGui::SliderFloat("mass", &mass, 0.0f, 1.0f);
+        ImGui::SliderFloat("stiffness", &stiffness, 0.0f, 500.0f);
+        ImGui::SliderFloat("target density", &targetDensity, 0.0f, 5000.0f);
+        ImGui::SliderFloat("viscosity", &viscosity, 0.0f, 5.0f);
+        ImGui::SliderFloat("collision damping", &collisionDamping, 0.0f, 1.0f);
+        ImGui::SliderFloat("gravity", &gravity, 0.0f, 50.0f);
+        ImGui::SliderFloat("time step", &fixedDeltaTime, 0.0f, 0.01f, "%.5f");
+
+        ImGui::SliderFloat2("spawn box position", spawnPos, -1.0f, 1.0f);
+        ImGui::SliderFloat2("spawn box size", spawnSize, 0.0f, 2.0f);
+
         if (ImGui::Button("Launch")) {
-            // Some logic, maybe change the particles number and reset the particles position
+            particlesNumberGui -= particlesNumberGui % 128;
+            particlesNumber = particlesNumberGui;
+
+            spawnRegion.position.x = spawnPos[0];
+            spawnRegion.position.y = spawnPos[1];
+            spawnRegion.size.x = spawnSize[0];
+            spawnRegion.size.y = spawnSize[1];
+
+            resetParticles(spawnRegion, particlesNumber, particles);
+
+            // Resetting the buffers
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+            glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Particle) * particlesNumber, particles.data(), GL_DYNAMIC_COPY);
+            
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleNextSSBO);
+            glBufferData(GL_SHADER_STORAGE_BUFFER, particlesNumber * sizeof(int), nullptr, GL_DYNAMIC_COPY);
+
+            glUseProgram(computeShaderProgram.ID);
+            glUniform1f(UniformLocations[0], mass);
+            glUniform1f(UniformLocations[1], stiffness);
+            glUniform1f(UniformLocations[2], targetDensity);
+            glUniform1f(UniformLocations[3], collisionDamping);
+            glUniform1f(UniformLocations[4], gravity);
+            glUniform1f(UniformLocations[5], fixedDeltaTime);
+            glUniform1f(UniformLocations[6], viscosity);
         }
 
         ImGui::PopStyleVar();

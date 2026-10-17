@@ -9,6 +9,7 @@ OpenGL4.3/src/glad.cpp
 
 OpenGL4.3/src/imgui/
 OpenGL4.3/header/imgui/
+OpenGL4.3/app/imgui.ini
 
 *.exe
 *.dll
