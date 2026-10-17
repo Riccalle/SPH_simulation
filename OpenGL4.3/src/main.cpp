@@ -30,10 +30,44 @@ struct Particle {
     */ 
 };
 
+glm::vec3 mouseInfo;
+
+void processInput(GLFWwindow* window) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) 
+        glfwSetWindowShouldClose(window, true);
+    
+    int currentWidth, currentHeight;
+    glfwGetWindowSize(window, &currentWidth, &currentHeight);
+
+    double mouseXpos;
+    double mouseYpos;
+    glfwGetCursorPos(window, &mouseXpos, &mouseYpos);
+    if (currentWidth > 0 && currentHeight > 0) {
+        float normX = ((float)mouseXpos / (float)currentWidth) * 2.0f - 1.0f;
+        float normY = -((float)mouseYpos / (float)currentHeight) * 2.0f + 1.0f;
+        mouseInfo.x = normX;
+        mouseInfo.y = normY;
+    }
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) 
+        mouseInfo.z = -1.0f;
+    else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) 
+        mouseInfo.z = 1.0f;
+    else 
+        mouseInfo.z = 0.0f;
+}
+
 void resetParticles(SpawnRegion spawnRegion, int particlesNumber, std::vector<Particle> &particles) {
     float spawnDensity = particlesNumber / (spawnRegion.size.x * spawnRegion.size.y);
     std::vector<glm::vec3> pos = std::vector<glm::vec3>();
     particles = std::vector<Particle>(particlesNumber);
+    float jitterStrenght = 0.0f;
+    if (particlesNumber < 12000) {
+        glm::ivec2 spawnCountPerAxis = calculateSpawnCountPerAxis(spawnRegion.size, spawnDensity);
+        float tx = spawnRegion.size.x / (spawnCountPerAxis.x - 1);
+        jitterStrenght = tx / 20.0f; // Jitter strenght is 5% of the horizontal difference bitween the particles
+        if (jitterStrenght < 1e-4f) jitterStrenght = 0.0f; 
+    }
     pos = pointGrid(spawnRegion, spawnDensity, 0.0f);
 
     for (int i = 0; i < particlesNumber; i++) {
@@ -78,7 +112,7 @@ int main(void) {
 
     srand(glfwGetTime());
     int particlesNumber = 38400;
-    const float radius = 0.005f;
+    float radius = 0.005f;
 
     SpawnRegion spawnRegion = {
         glm::vec2(0.0f, 0.0f),
@@ -94,7 +128,6 @@ int main(void) {
     glBindVertexArray(VAO);
 
     // Data
-
     unsigned int division = 20;
     std::vector<GLfloat> meshVert = {0.0f, 0.0f, 0.0f};
     std::vector<GLuint> meshIndices;
@@ -176,7 +209,8 @@ int main(void) {
     
     glUniform1f(glGetUniformLocation(shaderProgram.ID, "radius"), radius);
     glUseProgram(computeShaderProgram.ID);
-    glUniform1f(glGetUniformLocation(computeShaderProgram.ID, "radius"), radius);
+    GLint radiusUniLoc = glGetUniformLocation(computeShaderProgram.ID, "radius");
+    glUniform1f(radiusUniLoc, radius);
     glUniform2i(glGetUniformLocation(computeShaderProgram.ID, "gridRes"), gridResX, gridResY);
     int phaseUniformLocation = glGetUniformLocation(computeShaderProgram.ID, "phase");
 
@@ -187,6 +221,7 @@ int main(void) {
     float gravity = 9.8f;
     float fixedDeltaTime = 0.0008f;
     float viscosity = 1.5f;
+    float influenceRadius = 0.013f;
 
     GLint UniformLocations[] = {
         glGetUniformLocation(computeShaderProgram.ID, "mass"),
@@ -195,7 +230,8 @@ int main(void) {
         glGetUniformLocation(computeShaderProgram.ID, "collisionDamping"),
         glGetUniformLocation(computeShaderProgram.ID, "gravity"),
         glGetUniformLocation(computeShaderProgram.ID, "deltaTime"),
-        glGetUniformLocation(computeShaderProgram.ID, "viscosity")
+        glGetUniformLocation(computeShaderProgram.ID, "viscosity"),
+        glGetUniformLocation(computeShaderProgram.ID, "influenceRadius")
     };
 
     glUniform1f(UniformLocations[0], mass);
@@ -205,6 +241,10 @@ int main(void) {
     glUniform1f(UniformLocations[4], gravity);
     glUniform1f(UniformLocations[5], fixedDeltaTime);
     glUniform1f(UniformLocations[6], viscosity);
+    glUniform1f(UniformLocations[7], influenceRadius);
+
+    GLint mouseInfoUniLoc = glGetUniformLocation(computeShaderProgram.ID, "mouseInfo");
+    glUniform3f(mouseInfoUniLoc, mouseInfo.x, mouseInfo.y, mouseInfo.z);
 
     double lastTime = glfwGetTime();
     double thisTime;
@@ -231,6 +271,10 @@ int main(void) {
             std::cout << "\r\033[32mFrames per second: " << 1 / deltaTime << std::flush;
             timer = thisTime;
         }
+
+        processInput(window);
+        glUseProgram(computeShaderProgram.ID);
+        glUniform3f(mouseInfoUniLoc, mouseInfo.x, mouseInfo.y, mouseInfo.z);
 
         for (int i = 0; i < 8; i++) {
             int clearValue = -1;
@@ -278,6 +322,8 @@ int main(void) {
         ImGui::SliderFloat("collision damping", &collisionDamping, 0.0f, 1.0f);
         ImGui::SliderFloat("gravity", &gravity, 0.0f, 50.0f);
         ImGui::SliderFloat("time step", &fixedDeltaTime, 0.0f, 0.01f, "%.5f");
+        ImGui::SliderFloat("influence radius", &influenceRadius, 0.0f, 0.3f);
+        ImGui::SliderFloat("radius", &radius, 0.0f, 0.2f);
 
         ImGui::SliderFloat2("spawn box position", spawnPos, -1.0f, 1.0f);
         ImGui::SliderFloat2("spawn box size", spawnSize, 0.0f, 2.0f);
@@ -308,6 +354,11 @@ int main(void) {
             glUniform1f(UniformLocations[4], gravity);
             glUniform1f(UniformLocations[5], fixedDeltaTime);
             glUniform1f(UniformLocations[6], viscosity);
+            glUniform1f(UniformLocations[7], influenceRadius);
+            glUniform1f(radiusUniLoc, radius);
+
+            glUseProgram(shaderProgram.ID);
+            glUniform1f(glGetUniformLocation(shaderProgram.ID, "radius"), radius);
         }
 
         ImGui::PopStyleVar();

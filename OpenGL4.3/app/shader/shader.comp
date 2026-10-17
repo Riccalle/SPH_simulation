@@ -63,13 +63,17 @@ uniform float gravity;
 uniform float collisionDamping;
 uniform float deltaTime;
 uniform float viscosity;
+uniform float influenceRadius;
+
+uniform vec3 mouseInfo;
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
 
     // Global physics variables
-    const float influenceRadius = 0.013;
-    const float cellSize = influenceRadius;
+    float cellSize = influenceRadius;
+    const float mouseForce = 80.0f;
+    const float mouseInfluenceRadius = 0.12f;
 
     // Filling the grid (linked list)
     vec2 pos = p[i].pos.xy;
@@ -164,6 +168,11 @@ void main() {
 
         // Update and collisions
         force += vec2(0.0, -gravity * density);
+        vec2 mouseDelta = pos - mouseInfo.xy;
+
+        if (mouseInfo.z != 0.0f && length(mouseDelta) < mouseInfluenceRadius)
+            force += sign(mouseInfo.z) * normalize(mouseDelta) * mouseForce * density;
+
         vec2 acc = force / density;
         p[i].vel.xy += acc * deltaTime;
         p[i].pos.xy += p[i].vel.xy * deltaTime;
