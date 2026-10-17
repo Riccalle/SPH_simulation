@@ -7,4 +7,4 @@ There are two simulations: the first one, OpenGL3.3, calculates forces using the
 
 ## How to play with it
 
-To play with the SPH simulation you can click on code in the github repo and download zip. You then have to open app.exe.
+To play with the SPH simulation you can click the releases on github and download the latest release. You then have to open app.exe.
